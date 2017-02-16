@@ -5,12 +5,14 @@ var mysql = require('mysql');
 var bodyParser = require('body-parser');
 var json = require('json');
 
-var connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'appdatabase'
-});
+try {
+	var dbConfig = require('./db.config');
+} catch (e) {
+	console.error("Copy and rename 'db.config.js.sample' to 'db.config.js'");
+	process.exit(1);
+}
+
+var connection = mysql.createConnection(dbConfig);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
