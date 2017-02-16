@@ -14,7 +14,7 @@ var connection = mysql.createConnection({
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'front-end')));
 
 app.get('/getAmountOfOffers', function (req, res) {
 	connection.query('SELECT COUNT(*) AS amountOfOffers FROM offers', function(err, rows) {
@@ -32,10 +32,10 @@ app.get('/getRecordsToDisplay', function (req, res) {
 });
 
 app.all('/*', function(req, res) {
-	return res.sendFile(path.join(__dirname, 'pierwszy.html'));
+	return res.sendFile(path.join(__dirname, 'front-end', 'pierwszy.html'));
 });
 
-var server = app.listen(81, function () {
+var server = app.listen(3000, function () {
   	console.log('server online');
 });
 
