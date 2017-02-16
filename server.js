@@ -18,26 +18,29 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'front-end')));
 
-app.get('/getAmountOfOffers', function (req, res) {
+app.get('/getAmountOfOffers', function(req, res) {
 	connection.query('SELECT COUNT(*) AS amountOfOffers FROM offers', function(err, rows) {
-  		if (err) throw err;
-    	return res.json(rows[0].amountOfOffers);
-  })
+		if (err) throw err;
+		return res.json(rows[0].amountOfOffers);
+	})
 });
 
-app.get('/getRecordsToDisplay', function (req, res) {
-  var numberOfRecord = parseInt(req.query.numberOfRecord);
-	connection.query('SELECT * FROM offers LIMIT ?, 4',[numberOfRecord], function(err, rows) {
- 		 if (err) throw err;
-    return res.json(rows);
-  	})
+app.get('/getRecordsToDisplay', function(req, res) {
+	var numberOfRecord = parseInt(req.query.numberOfRecord);
+	connection.query('SELECT * FROM offers LIMIT ?, 4', [numberOfRecord], function(err, rows) {
+		if (err) throw err;
+		return res.json(rows);
+	})
 });
 
 app.all('/*', function(req, res) {
 	return res.sendFile(path.join(__dirname, 'front-end', 'pierwszy.html'));
 });
 
-var server = app.listen(3000, function () {
-  	console.log('server online');
-});
+connection.connect(function(err) {
+	if (err) throw Error('error connecting: ' + err.stack);
 
+	var server = app.listen(3000, function() {
+		console.log('server online');
+	});
+});
