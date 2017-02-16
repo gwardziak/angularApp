@@ -3,7 +3,6 @@ var app = express();
 var path = require('path');
 var mysql = require('mysql');
 var bodyParser = require('body-parser');
-var json = require('json');
 
 try {
 	var dbConfig = require('./db.config');
