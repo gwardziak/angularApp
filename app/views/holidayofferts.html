@@ -1,0 +1,39 @@
+<div class="container-fluid">
+	<div class="row" ng-repeat ="offer in recordsToDisplay">
+	  <div class="col-xs-12 well well-lg">
+		  <div class="col-xs-4">
+		  	<span ng-show ="offer.Photo" class="offerPhotos"><img src="img/{{ offer.Photo }}" width="100px"/> </span>
+			<span ng-show ="!offer.Photo" class="offerPhotos"><img src="img/noImage.jpg"/> </span>
+			</div>
+		  <div class="col-xs-3 offerText">
+			<p ng-show ="offer.Name">Name :  {{ offer.Name }}</p>
+			<p ng-show ="offer.Price">Price :  {{ offer.Price }}</p>
+			<p ng-show ="offer.Country">Country :  {{ offer.Country}}</p>
+			<p ng-show ="offer.City">City :  {{ offer.City}}</p>
+			<p ng-show ="offer.Rating">Rating :  {{ offer.Rating }} / 5</p> 
+		  </div>
+		  <div class="col-xs-2 col-xs-offset-1">Button Button</div>
+		  <div class="col-xs-2">ADS</div>
+	  </div>
+	</div>
+
+	<nav aria-label="Page navigation" class="text-center">
+	  <ul class="pagination">
+	    <li ng-show =" {{ actualPage + 1 }} >= amountOfNavBtns" >
+	      <a href="/home/page/{{ actualPage - 1 }}" aria-label="Previous">
+	        <span aria-hidden="true">&laquo;</span>
+	      </a>
+	    </li>
+		<li ng-repeat="i in getNumber(amountOfNavBtns) track by $index" ng-class="{ active: isActive('/home/page/{{ $index+1 }}')}">
+			<a href="/home/page/{{ $index+1 }}">{{ $index+1 }}</a>
+	  
+		</li>
+	    <li ng-show =" {{ actualPage + 1 }} <= amountOfNavBtns" >
+	      <a href="/home/page/{{ actualPage + 1 }}" aria-label="Next">
+	        <span aria-hidden="true">&raquo;</span>
+	        <!-- kurwa next/pre -->
+	      </a>
+	    </li>
+	  </ul>
+	</nav> 
+</div>
