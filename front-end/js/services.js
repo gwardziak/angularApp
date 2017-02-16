@@ -7,21 +7,20 @@
         var getAmountOfOffers = function (callback) {
             $http.get('getAmountOfOffers')   
                 .then(function (data) {
-                    callback(data.data);
+                    return callback(null, data.data);
+                })
+                .catch(function(err) {
+                    return callback(err);
                 });
         };
 
-        var getRecordsToDisplay = function (limit, success, error) {
-            //jebany error nie dziala
-            success = success||function(){};
-            error = error||function(){};
-
+        var getRecordsToDisplay = function (limit, callback) {
             $http.get('getRecordsToDisplay', {params: {numberOfRecord: limit}})   
                 .then(function (data) {
-                    success(data.data);
-                }, function(error) {
-                    error(error)
-                })
+                    return callback(null, data.data);
+                }, function(err) {
+                    return callback(err);
+                });
         };
 
         return {

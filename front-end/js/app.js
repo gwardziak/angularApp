@@ -26,11 +26,13 @@
    
     app.controller('offersCtrl', ['$scope', 'offers', '$routeParams','$location', function($scope, offers, $routeParams, $location){
 
-    	$scope.isActive = function (viewLocation) { 
+    	$scope.isActive = function(viewLocation) { 
         	return viewLocation === $location.path();
     	};
 
-        offers.getAmountOfOffers(function (offers) {
+        offers.getAmountOfOffers(function(err, offers) {
+            if (err) return console.error(err);
+
             $scope.amountOfNavBtns = amountOfNavBtns(offers);
         });
 
@@ -47,7 +49,9 @@
             return new Array(num);   
         }
 
-        offers.recordsToDisplay(numberOfFirstRecord($routeParams.pageId), function (recordsToDisplay) {
+        offers.recordsToDisplay(numberOfFirstRecord($routeParams.pageId), function(err, recordsToDisplay) {
+            if (err) return console.error(err);
+            
             $scope.recordsToDisplay = recordsToDisplay;
         });
        
