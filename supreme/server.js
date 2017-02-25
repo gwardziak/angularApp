@@ -4,7 +4,7 @@ var mysql = require('mysql');
 var bodyParser = require('body-parser');
 var dbConfig = require('./config.js');
 var bcrypt = require('bcrypt');
-var hash ="przegryw"; // export do modulu -> config
+
 
 var app = express();
 var connection = mysql.createConnection(dbConfig);
@@ -75,10 +75,11 @@ guestRouter.post('/createAccount', function (req, res) {
     connection.query('SELECT id FROM users WHERE username=?', [username], function(err, rows) {
 			if (err) throw err;
 			if (rows.length == 0){
-				console.log(password);
-				connection.query('INSERT INTO users (`id`, `username`, `password`) VALUES (?, ?, ?)', [null, username, password], function(err, rows) {
-					return res.send("user has been created");
-				})
+				bcrypt.hash(password, 10, function(err, hash) {
+					connection.query('INSERT INTO users (`id`, `username`, `password`) VALUES (?, ?, ?)', [null, username, hash], function(err, rows) {
+						return res.send("user has been created");
+					})
+				});				
 			}
 			else
 				return res.send("user already exist");
