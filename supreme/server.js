@@ -19,7 +19,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 function isInt(n){
     return Number(n) === n && n % 1 === 0;
-}
+};
 
 
 guestRouter.get('/offers', function (req, res) {
@@ -30,72 +30,102 @@ guestRouter.get('/offers', function (req, res) {
 		connection.query('SELECT * FROM offers LIMIT ?, ?', [offset, limit], function(err, rows) {
 			if (err) throw err;
 			return res.json(rows);
-		})
+		});
  	}
  	else
- 		res.send("Podane parametry są nieprawdiłowe")
-})
+ 		return res.send("Podane parametry są nieprawdiłowe")
+});
 
 guestRouter.get('/offers/:offerId/details', function (req, res) {
 	var offerId = parseInt(req.query.offerId);
-	console.log(offerId);
 
 	if (isInt(offerId)){
 		connection.query('SELECT * FROM offers WHERE Id=?', [offerId], function(err, rows) {
 			if (err) throw err;
 			return res.json(rows);
-		})
+		});
  	}
  	else
- 		res.send("Podane parametry są nieprawdiłowe")
-})
+ 		return res.send("Podane parametry są nieprawdiłowe");
+});
 
 guestRouter.post('/login', function (req, res) {
     var username = req.body.username;
     var password = req.body.password;
+
     connection.query('SELECT id FROM users WHERE username=?', [username], function(err, rows) {
-			if (err) throw err;
-			if (rows.length == 0)
-				return res.send("User nie istnieje");
-			else {
-				connection.query('SELECT id FROM users WHERE password=?', [password], function(err, rows) {
+		if (err) throw err;
+		if (rows.length == 0)
+			return res.send("User nie istnieje");
+		else {
+			connection.query('SELECT password FROM users WHERE username=?', [username], function(err, rows) {
+				if (err) throw err;
+				bcrypt.compare(password, rows[0].password, function(err, isMatch) {
 					if (err) throw err;
-					if (rows.length == 0)
-						return res.send("Hasło nieprawdiłowe");
-					else
-						res.send("zalogowano");
-				})
-			}
-	})    
-})
+                    if(isMatch)
+                        return res.send("zalogowano");
+                    else
+                        return res.send("haslo nieprawdiłowe");
+                });
+			});
+		};
+	});    
+});
 
 guestRouter.post('/createAccount', function (req, res) {
 	var username = req.body.username;
     var password = req.body.password;
+
     connection.query('SELECT id FROM users WHERE username=?', [username], function(err, rows) {
-			if (err) throw err;
-			if (rows.length == 0){
-				bcrypt.hash(password, 10, function(err, hash) {
+		if (err) throw err;
+		if (rows.length == 0) {
+			bcrypt.genSalt(10, function(err, salt) {
+				if (err) throw err;
+				bcrypt.hash(password, salt, function(err, hash) {
+					if (err) throw err;
 					connection.query('INSERT INTO users (`id`, `username`, `password`) VALUES (?, ?, ?)', [null, username, hash], function(err, rows) {
-						return res.send("user has been created");
-					})
-				});				
-			}
-			else
-				return res.send("user already exist");
-				
-
-
-	})
-})
+						if (err) throw err;
+							return res.send("user has been created");
+					});   
+				});
+			});		
+		}
+		else
+			return res.send("user already exist");
+	});
+});
 
 userRouter.get('/offers/:offerId/reservation', function (req, res) {
 
 })
 
-userRouter.get('/manageAccount/:username/delete', function (req, res) {
-
-})
+userRouter.route('/manageAccount/:username')
+	.get(function (req, res) {
+		var username = req.query.username;
+		if(username != undefined){ //FUNKCJA DO ZROBIENIA
+			connection.query('SELECT * FROM users WHERE username=?', [username], function(err, rows) {
+				if (err) throw err;
+				return res.json(rows);
+			});
+		}
+		else
+			return res.send("bledny parametr");
+	})
+	.put(function (req, res) {
+	    res.send('Update the book')
+	})
+	.delete(function (req, res) {
+		var username = req.query.username;
+		console.log(username);
+		if(username != undefined){
+			connection.query('DELETE FROM users WHERE username=?', [username], function(err, rows) {
+				if (err) throw err;
+				return res.send("user has been deleted"); //redirect do offers
+			});
+		}
+		else
+			return res.send("bledny parametr");
+	});
 
 userRouter.get('/manageAccount/:username/reservationHistory', function (req, res) {
 
@@ -106,6 +136,7 @@ adminRouter.get('/offers/manage', function (req, res) {
 })
 
 app.use('/', guestRouter);
+app.use('/', userRouter);
 
 app.all('/*', function(req, res) {
 	return res.sendFile(path.join(__dirname, 'public', 'index.html'));
