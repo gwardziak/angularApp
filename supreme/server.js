@@ -67,7 +67,7 @@ guestRouter.post('/login', function (req, res) {
 			bcrypt.compare(password, rows[0].password, function(err, isPasswordOk) {
 				if (err) throw err; // #1
 				if (isPasswordOk)
-					return res.send("zalogowano");
+					return res.send("zalogowano"); // fajne logowanie tylko szkoda, że nie loguje usera lol
 				
 				return res.send("haslo nieprawdiłowe");
 			});
@@ -102,9 +102,7 @@ userRouter.get('/offers/:offerId/reservation', function (req, res) {
 
 userRouter.route('/manageAccount/:username')
 	.get(function (req, res) {
-		const username = req.query.username;
-		if (typeof username === "undefined")
-			return res.send("bledny parametr");
+		const username = req.query.username; // w sumie tutaj nie muisz sprawdzac czy jest undefined bo nigdy nie bedzie bo :username
 
 		return connection.query('SELECT * FROM users WHERE username=?', [username], function(err, rows) {
 			if (err) throw err; // #1
@@ -117,9 +115,6 @@ userRouter.route('/manageAccount/:username')
 	})
 	.delete(function (req, res) {
 		const username = req.query.username;
-
-		if (typeof username === "undefined")
-			return res.send("bledny parametr");
 		
 		return connection.query('DELETE FROM users WHERE username=?', [username], function(err, rows) {
 			if (err) throw err; // #1
