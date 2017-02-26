@@ -1,130 +1,130 @@
-var express = require('express');
-var path = require('path');
-var mysql = require('mysql');
-var bodyParser = require('body-parser');
-var dbConfig = require('./config.js');
-var bcrypt = require('bcrypt');
+const express = require('express');
+const path = require('path');
+const mysql = require('mysql');
+const bodyParser = require('body-parser');
+const dbConfig = require('./config.js');
+const bcrypt = require('bcrypt');
 
+const connection = mysql.createConnection(dbConfig);
 
-var app = express();
-var connection = mysql.createConnection(dbConfig);
-var guestRouter = express.Router();
-var userRouter = express.Router();
-var adminRouter = express.Router();
-
+const app = express();
+const guestRouter = express.Router();
+const userRouter = express.Router();
+const adminRouter = express.Router();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-function isInt(n){
+function isInt(n) { // do innego pliku - jakiegos utils albo co
     return Number(n) === n && n % 1 === 0;
 };
 
+const SALT_LENGTH = 10;
+
+// #1 powinienes wypisac console.error(err) o zwrócic res.json jakis error bo w tem sposób to zcrashujesz serwer
+
+
 
 guestRouter.get('/offers', function (req, res) {
-	var offset = parseInt(req.query.offset);
-	var limit = parseInt(req.query.limit);
+	const offset = parseInt(req.query.offset);
+	const limit = parseInt(req.query.limit);
 
-	if (isInt(limit) && isInt(offset) ){
-		connection.query('SELECT * FROM offers LIMIT ?, ?', [offset, limit], function(err, rows) {
-			if (err) throw err;
-			return res.json(rows);
-		});
- 	}
- 	else
- 		return res.send("Podane parametry są nieprawdiłowe")
+	if (!isInt(limit) || !isInt(offset) )
+ 		return res.send("Podane parametry są nieprawdiłowe"); // to powinno byc jako json
+
+	return connection.query('SELECT * FROM offers LIMIT ?, ?', [offset, limit], function(err, rows) {
+		if (err) throw err; // #1
+		return res.json(rows);
+	});
 });
 
 guestRouter.get('/offers/:offerId/details', function (req, res) {
-	var offerId = parseInt(req.query.offerId);
+	const offerId = parseInt(req.query.offerId);
 
-	if (isInt(offerId)){
-		connection.query('SELECT * FROM offers WHERE Id=?', [offerId], function(err, rows) {
-			if (err) throw err;
-			return res.json(rows);
-		});
- 	}
- 	else
+	if (!isInt(offerId))
  		return res.send("Podane parametry są nieprawdiłowe");
+	
+	return connection.query('SELECT * FROM offers WHERE Id=?', [offerId], function(err, rows) {
+		if (err) throw err; // #1
+
+		return res.json(rows);
+	});
 });
 
 guestRouter.post('/login', function (req, res) {
-    var username = req.body.username;
-    var password = req.body.password;
+    const username = req.body.username; // nie sprawdzasz czy ktos wogole wyslal te parametry i czy sa  ok....
+    const password = req.body.password;
 
     connection.query('SELECT id FROM users WHERE username=?', [username], function(err, rows) {
-		if (err) throw err;
-		if (rows.length == 0)
-			return res.send("User nie istnieje");
-		else {
-			connection.query('SELECT password FROM users WHERE username=?', [username], function(err, rows) {
-				if (err) throw err;
-				bcrypt.compare(password, rows[0].password, function(err, isMatch) {
-					if (err) throw err;
-                    if(isMatch)
-                        return res.send("zalogowano");
-                    else
-                        return res.send("haslo nieprawdiłowe");
-                });
+		if (err) throw err; // #1
+		if (rows.length === 0) return res.send("User nie istnieje"); // jako json
+		
+		return connection.query('SELECT password FROM users WHERE username=?', [username], function(err, rows) {
+			if (err) throw err; // #1
+			// zapomniales sprawdzic dlugosci rows
+
+			bcrypt.compare(password, rows[0].password, function(err, isPasswordOk) {
+				if (err) throw err; // #1
+				if (isPasswordOk)
+					return res.send("zalogowano");
+				
+				return res.send("haslo nieprawdiłowe");
 			});
-		};
+		});
 	});    
 });
 
 guestRouter.post('/createAccount', function (req, res) {
-	var username = req.body.username;
-    var password = req.body.password;
+	const username = req.body.username;
+    const password = req.body.password; // nie sprawdziles parametrow
 
     connection.query('SELECT id FROM users WHERE username=?', [username], function(err, rows) {
-		if (err) throw err;
-		if (rows.length == 0) {
-			bcrypt.genSalt(10, function(err, salt) {
-				if (err) throw err;
-				bcrypt.hash(password, salt, function(err, hash) {
-					if (err) throw err;
-					connection.query('INSERT INTO users (`id`, `username`, `password`) VALUES (?, ?, ?)', [null, username, hash], function(err, rows) {
-						if (err) throw err;
-							return res.send("user has been created");
-					});   
-				});
-			});		
-		}
-		else
-			return res.send("user already exist");
+		if (err) throw err; // #1
+		if (rows.length > 0)
+			return res.send("user already exist"); // json
+		
+		return bcrypt.hash(password, SALT_LENGTH, function(err, hash) {
+			if (err) throw err; // #1
+
+			return connection.query('INSERT INTO users (`id`, `username`, `password`) VALUES (?, ?, ?)', [null, username, hash], function(err, rows) {
+				if (err) throw err; // #1
+				
+				return res.send("user has been created");
+			});   
+		});	
 	});
 });
 
 userRouter.get('/offers/:offerId/reservation', function (req, res) {
 
-})
+});
 
 userRouter.route('/manageAccount/:username')
 	.get(function (req, res) {
-		var username = req.query.username;
-		if(username != undefined){ //FUNKCJA DO ZROBIENIA
-			connection.query('SELECT * FROM users WHERE username=?', [username], function(err, rows) {
-				if (err) throw err;
-				return res.json(rows);
-			});
-		}
-		else
+		const username = req.query.username;
+		if (typeof username === "undefined")
 			return res.send("bledny parametr");
+
+		return connection.query('SELECT * FROM users WHERE username=?', [username], function(err, rows) {
+			if (err) throw err; // #1
+			// sprawdzic dlugosc rows i ew napisac jsonem ze niema takiego usera
+			return res.json(rows);
+		});
 	})
 	.put(function (req, res) {
-	    res.send('Update the book')
+	    return res.send('Update the book'); // json...
 	})
 	.delete(function (req, res) {
-		var username = req.query.username;
-		console.log(username);
-		if(username != undefined){
-			connection.query('DELETE FROM users WHERE username=?', [username], function(err, rows) {
-				if (err) throw err;
-				return res.send("user has been deleted"); //redirect do offers
-			});
-		}
-		else
+		const username = req.query.username;
+
+		if (typeof username === "undefined")
 			return res.send("bledny parametr");
+		
+		return connection.query('DELETE FROM users WHERE username=?', [username], function(err, rows) {
+			if (err) throw err; // #1
+			return res.send("user has been deleted"); // json
+		});
 	});
 
 userRouter.get('/manageAccount/:username/reservationHistory', function (req, res) {
@@ -143,10 +143,11 @@ app.all('/*', function(req, res) {
 });
 
 connection.connect(function(err) {
-	if (err) throw Error('error connecting: ' + err.stack);
-	var port = 3000;
-	var server = app.listen(port, function() {
+	if (err) throw Error(err); // tutaj możesz wyjebac blad bo to jest podczas startu serwera - lepiej odrazu widziec ze apka nie startuje
+
+	const port = 3000; // <- do configu
+	const server = app.listen(port, function(err) {
+		if (err) throw Error(err);
 		console.log('server online at port ' + port);
 	});
-
 });
