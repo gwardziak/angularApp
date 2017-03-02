@@ -33,6 +33,7 @@ const SALT_LENGTH = 10;
 guestRouter.use(function(req, res, next) {
   // check header or url parameters or post parameters for token
   	const token = req.body.token || req.query.token || req.headers['x-access-token'] || req.cookies.access_token;
+  	console.log(token);
   	// decode token
   	if (token) {
     	// verifies secret and checks exp
@@ -108,79 +109,97 @@ guestRouter.get('/offers/:offerId/details', function (req, res) {
 		return res.json(data);
 	});
 });
-
+//logowanie boskie 
 guestRouter.post('/login', function (req, res) {
     const username = req.body.username; // nie sprawdzasz czy ktos wogole wyslal te parametry i czy sa  ok....
-    const password = req.body.password;
+    const password = req.body.password;	//CHYBA KURWA NIE MUSZE I THINK SO.
+	const data = {
+		userStatus: req.decoded.userStatus
+	};
 
     connection.query('SELECT id FROM users WHERE username=?', [username], function(err, rows) {
 		if (err) { 
 			console.error(err); 
-			return res.send("wystapil nieoczekiwany blad podczas pobierania uzytkownika");
+			data.message = "Wystapil blad podczas pobierania uzytkownika";
+			return res.json(data);
 		}
-		if (rows.length === 0) return res.send("User nie istnieje"); // jako json
-		
+		if (rows.length === 0) {
+			data.message = "User nie istnieje";
+			return res.json(data);
+		}
 		return connection.query('SELECT password FROM users WHERE username=?', [username], function(err, rows) {
 			if (err) { 
 				console.error(err); 
-				return res.send("wystapil nieoczekiwany blad podczas pobierania hasla");
+				data.message = "wystapil blad podczas pobierania hasla";
+				return res.json(data);
 			}
 			// zapomniales sprawdzic dlugosci rows
 
 			bcrypt.compare(password, rows[0].password, function(err, isPasswordOk) {
 				if (err) { 
 					console.error(err); 
-					return res.send("Podane haslo jest nieprawdiłowe");
+					data.message = "Podane haslo jest nieprawdiłowe";
+					return res.json(data);
 				}
 				if (isPasswordOk) {
 					connection.query('SELECT userStatus FROM users WHERE username=?', [username], function(err, userStatus) {
 						if (err) { 
-							console.error(err); 
-							return res.send("wystapil nieoczekiwany blad podczas pobierania hasla");
+							console.error(err);
+							data.message = "Wystapil blad podczas pobierania inf. o uzytkowniku"; 
+							return res.json(data);
 						}				
-					var token = jwt.sign({user: username, userStatus: userStatus[0].userStatus}, app.get('superSecret')); //dodac secret do configu
-					new Cookies(req,res).set('access_token',token,{
-					  httpOnly: true
-					});
-
-
-						return res.json({
-          					message: 'Zalogowano i stworzono token!',
-        				});
+						var token = jwt.sign({user: username, userStatus: userStatus[0].userStatus}, app.get('superSecret')); //dodac secret do configu
+						new Cookies(req,res).set('access_token',token,{
+					  		httpOnly: true
+						});
+						//data.message = 'Zalogowano i stworzono token!'
+						// potrzebny redirect do offers, aby uwzglednic zalogowanie
+						//return res.json(data);
+						return res.redirect('/offers'); //parametry do podania w ang. chyba
         			});
 				}
-				else
-					return res.send("haslo nieprawdiłowe");
+				else {
+					data.message = "haslo nieprawdiłowe";
+					return res.json(data);
+				};
 			});
 		});
 	});    
 });
-
+//Chyba gitarka
 guestRouter.post('/createAccount', function (req, res) {
 	const username = req.body.username;
     const password = req.body.password; // nie sprawdziles parametrow
+    const data = {
+		userStatus: req.decoded.userStatus
+	};
 
     connection.query('SELECT id FROM users WHERE username=?', [username], function(err, rows) {
 		if (err) { 
 			console.error(err); 
-			return res.send("wystapil nieoczekiwany blad podczas wysylania nazwy uzytownika");
+			data.message = "Wystapil blad podczas tworzenia uzytkownika";
+			return res.json(data);
 		}
-		if (rows.length > 0)
-			return res.send("user already exist"); // json
+		if (rows.length > 0) {
+			data.message = "uzytkownik" + username + "juz istnieje";
+			return res.json(data);
+		}
 		
 		return bcrypt.hash(password, SALT_LENGTH, function(err, hash) {
 			if (err) { 
-				console.error(err); 
-				return res.send("wystapil nieoczekiwany blad podczas hashowania hasla");
+				console.error(err);
+				data.message = "wystapil blad przy hashowaniu hasła";
+				return res.json(data);
 			}
 
 			return connection.query('INSERT INTO users (`id`, `username`, `password`) VALUES (?, ?, ?)', [null, username, hash], function(err, rows) {
 				if (err) { 
 					console.error(err); 
-					return res.send("wystapil nieoczekiwany blad podczas pobierania szczegolow oferty");
+					data.message = "wystapil blad przy dodawaniu uzytkownika";
+					return res.json(data);
 				}
-				
-				return res.send("user has been created");
+				data.message = "uzytkownik zostal utworzony poprawnie";
+				return res.json(data);
 			});   
 		});	
 	});
