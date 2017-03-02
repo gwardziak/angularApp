@@ -5,7 +5,8 @@ const bodyParser = require('body-parser');
 const dbConfig = require('./config.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-var Cookies = require( "cookies" );
+const Cookies = require( "cookies" );
+const cookieParser = require('cookie-parser');
 
 const connection = mysql.createConnection(dbConfig);
 
@@ -16,6 +17,7 @@ const adminRouter = express.Router();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('superSecret', 'dupa');
 
@@ -25,34 +27,85 @@ function isInt(n) { // do innego pliku - jakiegos utils albo co
 
 const SALT_LENGTH = 10;
 
+
+//Token handler zajebisty
+
+guestRouter.use(function(req, res, next) {
+  // check header or url parameters or post parameters for token
+  	const token = req.body.token || req.query.token || req.headers['x-access-token'] || req.cookies.access_token;
+  	// decode token
+  	if (token) {
+    	// verifies secret and checks exp
+    	jwt.verify(token, app.get('superSecret'), function(err, decoded) {      
+      		if (err) {
+        		req.decoded = { 
+        		tokenSuccess: false,
+        		message: 'Failed to authenticate token.',
+        		userStatus: 'guest' 
+        		}
+        		next();   
+     		} 
+     		else {
+        		// if everything is good, save to request for use in other routes
+        		console.log(decoded);
+        		req.decoded = decoded;    
+        		next();
+     		};
+   		});
+  	}
+  	else {
+    	// if there is no token
+    	req.decoded = {
+    		tokenSuccess: false,
+        	message: 'No token provided.',
+        	userStatus: 'guest' 
+    	}
+    	next();    
+  	};
+});
+//ZAJEBISTY ROUTE W CHUJ 
 guestRouter.get('/offers', function (req, res) {
 	const offset = parseInt(req.query.offset);
 	const limit = parseInt(req.query.limit);
+	const data = {
+		userStatus: req.decoded.userStatus
+	};
 
-	if (!isInt(limit) || !isInt(offset) )
- 		return res.send("Podane parametry są nieprawdiłowe"); // to powinno byc jako json
+	if (!isInt(limit) || !isInt(offset) ){
+		data.message = "Podane parametry są nieprawdiłowe"
+ 		return res.json(data);
+	}
 
 	return connection.query('SELECT * FROM offers LIMIT ?, ?', [offset, limit], function(err, rows) {
 		if (err) { 
-			console.error(err); 
-			return res.send("wystapil nieoczekiwany blad podczas pobierania listy ofert");
+			console.error(err);
+			data.message = "Podczas pobierania ofert wystapil blad"; 
+			return res.json(data);
 		}
-		return res.json(rows);
+		data.offers = rows;
+		return res.json(data);
 	});
 });
-
+// tez chyba zajebisty
 guestRouter.get('/offers/:offerId/details', function (req, res) {
 	const offerId = parseInt(req.query.offerId);
+	const data = {
+		userStatus: req.decoded.userStatus
+	};
 
-	if (!isInt(offerId))
- 		return res.send("Podane parametry są nieprawdiłowe");
+	if (!isInt(offerId)){
+		data.message = "Podane parametry są nieprawdiłowe"
+ 		return res.json(data);
+	}
 	
 	return connection.query('SELECT * FROM offers WHERE Id=?', [offerId], function(err, rows) {
 		if (err) { 
 			console.error(err); 
-			return res.send("wystapil nieoczekiwany blad podczas pobierania szczegolow oferty");
+			data.message = "Podczas pobierania szczegolow oferty"; 
+			return res.json(data);
 		}
-		return res.json(rows);
+		data.offers = rows;
+		return res.json(data);
 	});
 });
 
@@ -77,7 +130,7 @@ guestRouter.post('/login', function (req, res) {
 			bcrypt.compare(password, rows[0].password, function(err, isPasswordOk) {
 				if (err) { 
 					console.error(err); 
-					return res.send("wystapil nieoczekiwany blad podczas pobierania szczegolow oferty");
+					return res.send("Podane haslo jest nieprawdiłowe");
 				}
 				if (isPasswordOk) {
 					connection.query('SELECT userStatus FROM users WHERE username=?', [username], function(err, userStatus) {
@@ -85,10 +138,12 @@ guestRouter.post('/login', function (req, res) {
 							console.error(err); 
 							return res.send("wystapil nieoczekiwany blad podczas pobierania hasla");
 						}				
-					var token = jwt.sign({user: username, status: userStatus[0].userStatus}, app.get('superSecret')); //dodac secret do configu
+					var token = jwt.sign({user: username, userStatus: userStatus[0].userStatus}, app.get('superSecret')); //dodac secret do configu
 					new Cookies(req,res).set('access_token',token,{
 					  httpOnly: true
 					});
+
+
 						return res.json({
           					message: 'Zalogowano i stworzono token!',
         				});
@@ -131,6 +186,9 @@ guestRouter.post('/createAccount', function (req, res) {
 	});
 });
 
+//ROUTEguest DO ODZYSKIWANIA KONTA
+
+//ROUTEuser DO WYLOGUJ usuwanie ciastka token
 userRouter.get('/offers/:offerId/reservation', function (req, res) {
 
 });
@@ -168,7 +226,7 @@ userRouter.get('/manageAccount/:username/reservationHistory', function (req, res
 })
 
 adminRouter.get('/offers/manage', function (req, res) {
-	//put/post/del/get
+	//put/post/del/get userow ofert, 
 })
 
 app.use('/', guestRouter);
