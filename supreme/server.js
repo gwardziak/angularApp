@@ -204,10 +204,24 @@ guestRouter.post('/createAccount', function (req, res) {
 		});	
 	});
 });
-
 //ROUTEguest DO ODZYSKIWANIA KONTA
+guestRouter.post('/lostAccount/', function (req, res) {
+ //no one know how to do it.
+});
 
-//ROUTEuser DO WYLOGUJ usuwanie ciastka token
+userRouter.get('/:username/logout', function (req, res) {
+	const username = req.query.username;
+	if(req.decoded.userStatus != "guest") {
+		res.clearCookie("access_token");
+		return res.redirect('/offers'); // ????
+	}
+	else {
+		return res.redirect('/offers'); //parametry do podania w ang. chyba
+	}
+
+});
+
+//rezerwacja
 userRouter.get('/offers/:offerId/reservation', function (req, res) {
 
 });
@@ -215,31 +229,50 @@ userRouter.get('/offers/:offerId/reservation', function (req, res) {
 userRouter.route('/manageAccount/:username')
 	.get(function (req, res) {
 		const username = req.query.username; // w sumie tutaj nie muisz sprawdzac czy jest undefined bo nigdy nie bedzie bo :username
-
-		return connection.query('SELECT * FROM users WHERE username=?', [username], function(err, rows) {
-			if (err) { 
-				console.error(err); 
-				return res.send("wystapil nieoczekiwany blad podczas pobierania szczegolow oferty");
-			}
-			// sprawdzic dlugosc rows i ew napisac jsonem ze niema takiego usera
-			return res.json(rows);
-		});
+		if(req.decoded.userStatus != "guest") {
+			return connection.query('SELECT * FROM users WHERE username=?', [username], function(err, rows) {
+				if (err) { 
+					console.error(err); 
+					return res.json("wystapil nieoczekiwany blad podczas pobierania danych uzytkownika");
+				}
+				// sprawdzic dlugosc rows i ew napisac jsonem ze niema takiego usera
+				return res.json(rows);
+			});
+		}
+		else
+			return res.redirect('/offers'); //parametry do podania w ang. chyba
 	})
 	.put(function (req, res) {
-	    return res.send('Update the book'); // json...
+		if(req.decoded.userStatus != "guest") {
+			const decodedUsername = req.decoded.user;
+			const username = req.body.username;
+			return connection.query('UPDATE users set username=? WHERE username=?', [username, decodedUsername], function(err, rows) {
+				if (err) { 
+					console.error(err); 
+				return res.json("wystapil blad podczas edytowania danych");
+				}
+
+				return res.redirect('/manageAccount/:username');
+			});
+		}
+		else
+			return res.redirect('/offers'); //parametry do podania w ang. chyba
 	})
 	.delete(function (req, res) {
 		const username = req.query.username;
-		
+		if(req.decoded.userStatus != "guest") {
 		return connection.query('DELETE FROM users WHERE username=?', [username], function(err, rows) {
 			if (err) { 
 				console.error(err); 
-				return res.send("wystapil nieoczekiwany blad podczas pobierania szczegolow oferty");
+				return res.json("wystapil nieoczekiwany blad podczas usuwania uzytkownika");
 			}
-			return res.send("user has been deleted"); // json
+			return res.redirect('/offers');
 		});
+		}
+		else
+			return res.redirect('/offers'); //parametry do podania w ang. chyba
 	});
-
+//historia rezerwacji
 userRouter.get('/manageAccount/:username/reservationHistory', function (req, res) {
 
 })
